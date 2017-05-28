@@ -12,7 +12,7 @@ lightmeterParams = {
     'idProduct': 0x000c,
     'configuration': 1,
     'interface': (0, 0),
-    'reqLen': 64,
+    'reqLen': 64
 }
 
 def initDevice():
@@ -41,7 +41,7 @@ def initDevice():
 
     endpointIn = util.find_descriptor(
         intf,
-        # match the first OUT endpoint
+        # match the first IN endpoint
         custom_match = lambda e: \
             usb.util.endpoint_direction(e.bEndpointAddress) \
             == util.ENDPOINT_IN)
