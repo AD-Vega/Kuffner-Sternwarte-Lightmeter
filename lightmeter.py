@@ -26,7 +26,18 @@ def initDevice():
 
     # set the active configuration. With no arguments, the first
     # configuration will be the active one
-    dev.set_configuration(lightmeterParams['configuration'])
+    try:
+        dev.set_configuration(lightmeterParams['configuration'])
+    except usb.USBError as e:
+        # if there are permission problems, this is where they manifest
+        if e.errno != 13:
+            raise e
+        print(e, file=sys.stderr)
+        print('Set read/write permissions on device node '
+              '/dev/bus/usb/{:03d}/{:03d}'.format(dev.bus,dev.address),
+              file=sys.stderr)
+        print('Alternatively, use udev to fix this permanently.')
+        exit(1)
 
     # get an endpoint instance
     cfg = dev.get_active_configuration()
