@@ -3,6 +3,7 @@
 import usb.core as usb
 import usb.util as util
 import sys
+import argparse
 from time import sleep, time
 from datetime import datetime
 
@@ -109,11 +110,13 @@ def readLight(endpoints):
     return reading, daylight, isOK
 
 if __name__ == '__main__':
-    if len(sys.argv) < 2:
-        print("Usage: {} interval_minutes".format(sys.argv[0]),
-              file=sys.stderr)
-        exit(1)
-    minutes = float(sys.argv[1])
+    parser = argparse.ArgumentParser(description='Read light level from a'
+                                                 'Kuffner-Sternwarte lightmeter')
+    parser.add_argument('-i', '--interval', type=float, default=1.0,
+                        help='sampling interval in minutes (can be fractional)')
+
+    args = parser.parse_args()
+    minutes = args.interval
     endpoints = initDevice()
     while True:
         T = readTemperature(endpoints)
