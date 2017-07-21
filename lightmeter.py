@@ -73,6 +73,23 @@ def readTemperature(endpoints):
     # Throw away 3 status bits and convert to decimal.
     return (raw[0] // 8 + raw[1] * 32) / 16
 
+def luxFromDaysensor(Ch0, Ch1):
+    """ Calculates Lux from the TAOS, www.taosinc.com TSL2560/TSL2561 two band light sensor
+        for the TMB-package.
+        Code from the Kuffner-Sternwarte web site.
+    """
+    Chr = Ch1 / Ch0
+    # Apply calibration recommended by manufacturer for different channel-ratios (IR-correction for vis-sensor to get Lux)
+    if Chr <= 0.50:                        Lux=0.0304  *Ch0  - 0.062*Ch0*(Ch1/Ch0)**1.4
+    elif (0.50 < Chr) and (Chr  <= 0.61):  Lux=0.0224  *Ch0  - 0.031  *Ch1
+    elif (0.61 < Chr) and (Chr  <= 0.80):  Lux=0.0128  *Ch0  - 0.0153 *Ch1
+    elif (0.80 < Chr) and (Chr  <= 1.30):  Lux=0.00146*Ch0  - 0.00112*Ch1
+    elif 1.30 < Chr:                       Lux=0
+    else: raise RuntimeError("Invalid daysensor channel ratio.")
+    # calibration with Voltcraft handheld vs. Lightmeter Mark 2.3 No. L001 TAOS-daysensor
+    Faktor = 21.0
+    return Lux*Faktor
+
 def readLight(endpoints):
     endpointIn, endpointOut = endpoints
     N = endpointOut.write('L')
@@ -88,7 +105,8 @@ def readLight(endpoints):
     rawReading = 256 * raw[1] + raw[0]
     reading = rawReading * factors[measurementRange]
     isOK = rawReading < 32000
-    return reading, TslMw0, TslMw1, isOK
+    daylight = luxFromDaysensor(TslMw0, TslMw1)
+    return reading, daylight, isOK
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
@@ -99,11 +117,12 @@ if __name__ == '__main__':
     endpoints = initDevice()
     while True:
         T = readTemperature(endpoints)
-        L, TslMw0, TslMw1, isOK = readLight(endpoints)
+        L, daylight, isOK = readLight(endpoints)
         unix = int(time())
         utc = datetime.fromtimestamp(unix)
         print(utc, 'UTC', unix, 'UNIX',
-              T, '°C', L, 'units',
-              (('(ok' if isOK else '(err)') + ', 0x{:04x} 0x{:04x})')
-              .format(TslMw0, TslMw1))
+              '{:.1f}'.format(T), '°C',
+              L, 'counts',
+              '{:.3g}'.format(daylight), 'lx',
+              ('OK' if isOK else 'ERROR'))
         sleep(minutes * 60)
