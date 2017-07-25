@@ -115,18 +115,25 @@ if __name__ == '__main__':
                                                  'mark 2.3')
     parser.add_argument('-i', '--interval', type=float, default=1.0,
                         help='sampling interval in minutes (can be fractional)')
+    parser.add_argument('-f', '--format', default='text', choices=('text', 'json'),
+                        help='output format')
 
     args = parser.parse_args()
-    minutes = args.interval
+    if args.format == 'text':
+        print('# DATE_UTC TIME_UTC UNIX_EPOCH T_CELSIUS LIGHTMETER_COUNTS DAYLIGHT_LUX STATUS')
+    elif args.format == 'json':
+        import json
+
     endpoints = initDevice()
     while True:
         T = readTemperature(endpoints)
         L, daylight, isOK = readLight(endpoints)
         unix = int(time())
         utc = datetime.fromtimestamp(unix)
-        print(utc, 'UTC', unix, 'UNIX',
-              '{:.1f}'.format(T), '°C',
-              L, 'counts',
-              '{:.3g}'.format(daylight), 'lx',
-              ('OK' if isOK else 'ERROR'))
-        sleep(minutes * 60)
+        if args.format == 'text':
+            print(utc, unix, '{:.1f}'.format(T), L,
+                  '{:.3g}'.format(daylight),
+                  ('OK' if isOK else 'ERROR'))
+        elif args.format == 'json':
+            pass
+        sleep(args.interval * 60)
