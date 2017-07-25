@@ -4,110 +4,151 @@ import usb.core as usb
 import usb.util as util
 import sys
 import argparse
+import attr
 from time import sleep, time
 from datetime import datetime
 
-# The damn thing identifies as a Microchip PICDEM
-lightmeterParams = {
-    'idVendor': 0x04d8,
-    'idProduct': 0x000c,
-    'configuration': 1,
-    'interface': (0, 0),
-    'reqLen': 64
-}
+class Lightmeter:
+    """An instance of a Kuffner-Sternwarte lightmeter. Call `read` to read the
+    timestamped light levels."""
 
-def initDevice():
-    # find our device
-    dev = usb.find(idVendor=lightmeterParams['idVendor'],
-                   idProduct=lightmeterParams['idProduct'])
+    @attr.s(frozen=True)
+    class Reading:
+        """A lightmeter reading.
 
-    # was it found?
-    if dev is None:
-        raise RuntimeError('Device not found')
+        Reading is a read-only structure with the following fields:
+            utc -- a `datetime` object representing the timestamp
+            unix -- a UNIX epoch representing the timestamp
+            lightlevel -- the raw counts representing the light level
+            daylight -- the reading of the daylight sensor in Lux
+            temperature -- the temperature in degrees Celsius
+            status -- True if everything was fine, False otherwise
 
-    # set the active configuration. With no arguments, the first
-    # configuration will be the active one
-    try:
-        dev.set_configuration(lightmeterParams['configuration'])
-    except usb.USBError as e:
-        # if there are permission problems, this is where they manifest
-        if e.errno != 13:
-            raise e
-        print(e, file=sys.stderr)
-        print('Set read/write permissions on device node '
-              '/dev/bus/usb/{:03d}/{:03d}'.format(dev.bus,dev.address),
-              file=sys.stderr)
-        print('Alternatively, use udev to fix this permanently.')
-        exit(1)
+        The daylight sensor is available for certain hardware models only.
+        """
+        utc = attr.ib()
+        unix = attr.ib()
+        lightlevel = attr.ib()
+        daylight = attr.ib()
+        temperature = attr.ib()
+        status = attr.ib()
 
-    # get an endpoint instance
-    cfg = dev.get_active_configuration()
-    intf = cfg[lightmeterParams['interface']]
+    def __init__(self):
+        self._endpoints = Lightmeter._initDevice()
 
-    endpointOut = util.find_descriptor(
-        intf,
-        # match the first OUT endpoint
-        custom_match = lambda e: \
-            usb.util.endpoint_direction(e.bEndpointAddress) \
-            == util.ENDPOINT_OUT)
+    def read(self):
+        """Returns an instance of Lightmeter.Reading holding the current readings."""
+        unix = int(time())
+        L, daylight, isOK = Lightmeter._readLight(self._endpoints)
+        T = Lightmeter._readTemperature(self._endpoints)
+        utc = datetime.fromtimestamp(unix)
+        return Lightmeter.Reading(utc=utc, unix=unix, lightlevel=L,
+                                  daylight=daylight, temperature=T,
+                                  status=isOK)
 
-    endpointIn = util.find_descriptor(
-        intf,
-        # match the first IN endpoint
-        custom_match = lambda e: \
-            usb.util.endpoint_direction(e.bEndpointAddress) \
-            == util.ENDPOINT_IN)
+    def _initDevice():
+        """Finds a Microchip PICDEM, which is what the lightmeter identifies as,
+        sadly. Not robust, but I can see no better way."""
+        lightmeterParams = {
+            'idVendor': 0x04d8,
+            'idProduct': 0x000c,
+            'configuration': 1,
+            'interface': (0, 0),
+            'reqLen': 64
+        }
 
-    if endpointOut is None or endpointIn is None:
-        raise RuntimeError('Unable to open endpoints')
+        # find our device
+        dev = usb.find(idVendor=lightmeterParams['idVendor'],
+                    idProduct=lightmeterParams['idProduct'])
 
-    return endpointIn, endpointOut
+        # was it found?
+        if dev is None:
+            raise RuntimeError('Device not found')
 
-def readTemperature(endpoints):
-    endpointIn, endpointOut = endpoints
-    N = endpointOut.write('T')
-    if N != 1:
-        raise RuntimeError('USB write error')
-    raw = endpointIn.read(2)
-    if len(raw) != 2:
-        raise RuntimeError('USB read error')
-    # Throw away 3 status bits and convert to decimal.
-    return (raw[0] // 8 + raw[1] * 32) / 16
+        # set the active configuration. With no arguments, the first
+        # configuration will be the active one
+        try:
+            dev.set_configuration(lightmeterParams['configuration'])
+        except usb.USBError as e:
+            # if there are permission problems, this is where they manifest
+            if e.errno != 13:
+                raise e
+            print(e, file=sys.stderr)
+            print('Set read/write permissions on device node '
+                '/dev/bus/usb/{:03d}/{:03d}'.format(dev.bus,dev.address),
+                file=sys.stderr)
+            print('Alternatively, use udev to fix this permanently.')
+            exit(1)
 
-def luxFromDaysensor(Ch0, Ch1):
-    """ Calculates Lux from the TAOS, www.taosinc.com TSL2560/TSL2561 two band light sensor
-        for the TMB-package.
-        Code from the Kuffner-Sternwarte web site.
-    """
-    Chr = Ch1 / Ch0
-    # Apply calibration recommended by manufacturer for different channel-ratios (IR-correction for vis-sensor to get Lux)
-    if Chr <= 0.50:                        Lux=0.0304  *Ch0  - 0.062*Ch0*(Ch1/Ch0)**1.4
-    elif (0.50 < Chr) and (Chr  <= 0.61):  Lux=0.0224  *Ch0  - 0.031  *Ch1
-    elif (0.61 < Chr) and (Chr  <= 0.80):  Lux=0.0128  *Ch0  - 0.0153 *Ch1
-    elif (0.80 < Chr) and (Chr  <= 1.30):  Lux=0.00146*Ch0  - 0.00112*Ch1
-    elif 1.30 < Chr:                       Lux=0
-    else: raise RuntimeError("Invalid daysensor channel ratio.")
-    # calibration with Voltcraft handheld vs. Lightmeter Mark 2.3 No. L001 TAOS-daysensor
-    Faktor = 21.0
-    return Lux*Faktor
+        # get an endpoint instance
+        cfg = dev.get_active_configuration()
+        intf = cfg[lightmeterParams['interface']]
 
-def readLight(endpoints):
-    endpointIn, endpointOut = endpoints
-    N = endpointOut.write('L')
-    if N != 1:
-        raise RuntimeError('USB write error')
-    raw = endpointIn.read(7)
-    if len(raw) != 7:
-        raise RuntimeError('USB read error')
-    factors = (None, 120, 8, 4, 2, 1)
-    measurementRange = raw[2]
-    TslMw0 = 256 * raw[4] + raw[3];
-    TslMw1 = 256 * raw[6] + raw[5];
-    rawReading = 256 * raw[1] + raw[0]
-    reading = rawReading * factors[measurementRange]
-    isOK = rawReading < 32000
-    daylight = luxFromDaysensor(TslMw0, TslMw1)
-    return reading, daylight, isOK
+        endpointOut = util.find_descriptor(
+            intf,
+            # match the first OUT endpoint
+            custom_match = lambda e: \
+                usb.util.endpoint_direction(e.bEndpointAddress) \
+                == util.ENDPOINT_OUT)
+
+        endpointIn = util.find_descriptor(
+            intf,
+            # match the first IN endpoint
+            custom_match = lambda e: \
+                usb.util.endpoint_direction(e.bEndpointAddress) \
+                == util.ENDPOINT_IN)
+
+        if endpointOut is None or endpointIn is None:
+            raise RuntimeError('Unable to open endpoints')
+
+        return endpointIn, endpointOut
+
+    def _readTemperature(endpoints):
+        endpointIn, endpointOut = endpoints
+        N = endpointOut.write('T')
+        if N != 1:
+            raise RuntimeError('USB write error')
+        raw = endpointIn.read(2)
+        if len(raw) != 2:
+            raise RuntimeError('USB read error')
+        # Throw away 3 status bits and convert to decimal.
+        return (raw[0] // 8 + raw[1] * 32) / 16
+
+    def _luxFromDaysensor(Ch0, Ch1):
+        """ Calculates Lux from the TAOS, www.taosinc.com TSL2560/TSL2561 two band light sensor
+            for the TMB-package.
+            Code from the Kuffner-Sternwarte web site.
+        """
+        Chr = Ch1 / Ch0
+        # Apply calibration recommended by manufacturer for different channel-ratios (IR-correction for vis-sensor to get Lux)
+        if Chr <= 0.50:                        Lux=0.0304  *Ch0  - 0.062*Ch0*(Ch1/Ch0)**1.4
+        elif (0.50 < Chr) and (Chr  <= 0.61):  Lux=0.0224  *Ch0  - 0.031  *Ch1
+        elif (0.61 < Chr) and (Chr  <= 0.80):  Lux=0.0128  *Ch0  - 0.0153 *Ch1
+        elif (0.80 < Chr) and (Chr  <= 1.30):  Lux=0.00146*Ch0  - 0.00112*Ch1
+        elif 1.30 < Chr:                       Lux=0
+        else: raise RuntimeError("Invalid daysensor channel ratio.")
+        # calibration with Voltcraft handheld vs. Lightmeter Mark 2.3 No. L001 TAOS-daysensor
+        Faktor = 21.0
+        return Lux*Faktor
+
+    def _readLight(endpoints):
+        endpointIn, endpointOut = endpoints
+        N = endpointOut.write('L')
+        if N != 1:
+            raise RuntimeError('USB write error')
+        raw = endpointIn.read(7)
+        if len(raw) != 7:
+            raise RuntimeError('USB read error')
+        factors = (None, 120, 8, 4, 2, 1)
+        measurementRange = raw[2]
+        TslMw0 = 256 * raw[4] + raw[3];
+        TslMw1 = 256 * raw[6] + raw[5];
+        rawReading = 256 * raw[1] + raw[0]
+        reading = rawReading * factors[measurementRange]
+        isOK = rawReading < 32000
+        daylight = Lightmeter._luxFromDaysensor(TslMw0, TslMw1)
+        return reading, daylight, isOK
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Read light level from a '
@@ -124,16 +165,14 @@ if __name__ == '__main__':
     elif args.format == 'json':
         import json
 
-    endpoints = initDevice()
+    lmeter = Lightmeter()
     while True:
-        T = readTemperature(endpoints)
-        L, daylight, isOK = readLight(endpoints)
-        unix = int(time())
-        utc = datetime.fromtimestamp(unix)
+        l = lmeter.read()
         if args.format == 'text':
-            print(utc, unix, '{:.1f}'.format(T), L,
-                  '{:.3g}'.format(daylight),
-                  ('OK' if isOK else 'ERROR'))
+            print(l.utc, l.unix,
+                  '{:.1f}'.format(l.temperature), l.lightlevel,
+                  '{:.3g}'.format(l.daylight),
+                  ('OK' if l.status else 'ERROR'))
         elif args.format == 'json':
             pass
         sleep(args.interval * 60)
