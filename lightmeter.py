@@ -2,8 +2,6 @@
 
 import usb.core as usb
 import usb.util as util
-import sys
-import argparse
 import attr
 from time import sleep, time
 from datetime import datetime
@@ -158,6 +156,9 @@ class Lightmeter:
 
 
 if __name__ == '__main__':
+    import sys
+    import argparse
+
     parser = argparse.ArgumentParser(description='Read light level from a '
                                                  'Kuffner-Sternwarte lightmeter '
                                                  'mark 2.3')
