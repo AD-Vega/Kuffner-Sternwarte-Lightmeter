@@ -110,8 +110,9 @@ def readLight(endpoints):
     return reading, daylight, isOK
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Read light level from a'
-                                                 'Kuffner-Sternwarte lightmeter')
+    parser = argparse.ArgumentParser(description='Read light level from a '
+                                                 'Kuffner-Sternwarte lightmeter '
+                                                 'mark 2.3')
     parser.add_argument('-i', '--interval', type=float, default=1.0,
                         help='sampling interval in minutes (can be fractional)')
 
