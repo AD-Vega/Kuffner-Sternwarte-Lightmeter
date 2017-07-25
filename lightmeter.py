@@ -70,15 +70,12 @@ class Lightmeter:
         try:
             dev.set_configuration(lightmeterParams['configuration'])
         except usb.USBError as e:
-            # if there are permission problems, this is where they manifest
-            if e.errno != 13:
-                raise e
-            print(e, file=sys.stderr)
-            print('Set read/write permissions on device node '
-                '/dev/bus/usb/{:03d}/{:03d}'.format(dev.bus,dev.address),
-                file=sys.stderr)
-            print('Alternatively, use udev to fix this permanently.')
-            exit(1)
+            # if there are permission problems, this is where they manifest;
+            # attach the bus and address so that outer code can print an
+            # informative message.
+            e.bus = dev.bus
+            e.address = dev.address
+            raise e
 
         # get an endpoint instance
         cfg = dev.get_active_configuration()
@@ -165,7 +162,18 @@ if __name__ == '__main__':
     elif args.format == 'json':
         import json
 
-    lmeter = Lightmeter()
+    try:
+        lmeter = Lightmeter()
+    except usb.USBError as e:
+        if e.errno != 13:
+                raise e
+        print(e, file=sys.stderr)
+        print('Set read/write permissions on device node '
+            '/dev/bus/usb/{:03d}/{:03d}'.format(e.bus,e.address),
+            file=sys.stderr)
+        print('Alternatively, use udev to fix this permanently.')
+        exit(1)
+
     while True:
         l = lmeter.read()
         if args.format == 'text':
