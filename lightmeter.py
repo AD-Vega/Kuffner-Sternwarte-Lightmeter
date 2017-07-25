@@ -33,6 +33,16 @@ class Lightmeter:
         temperature = attr.ib()
         status = attr.ib()
 
+        def asdict(self):
+            dct = attr.asdict(self)
+            del dct['utc']
+            return dct
+
+        def fromdict(dct):
+            dct = dct.copy()
+            dct['utc'] = datetime.fromtimestamp(dct['unix'])
+            return Lightmeter.Reading(**dct)
+
     def __init__(self):
         self._endpoints = Lightmeter._initDevice()
 
@@ -182,5 +192,5 @@ if __name__ == '__main__':
                   '{:.3g}'.format(l.daylight),
                   ('OK' if l.status else 'ERROR'))
         elif args.format == 'json':
-            pass
+            print(json.dumps(l.asdict()))
         sleep(args.interval * 60)
