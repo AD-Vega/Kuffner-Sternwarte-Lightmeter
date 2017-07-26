@@ -168,10 +168,6 @@ if __name__ == '__main__':
                         help='output format')
 
     args = parser.parse_args()
-    if args.format == 'text':
-        print('# DATE_UTC TIME_UTC UNIX_EPOCH T_CELSIUS LIGHTMETER_COUNTS DAYLIGHT_LUX STATUS')
-    elif args.format == 'json':
-        import json
 
     try:
         lmeter = Lightmeter()
@@ -184,6 +180,11 @@ if __name__ == '__main__':
             file=sys.stderr)
         print('Alternatively, use udev to fix this permanently.')
         exit(1)
+
+    if args.format == 'text':
+        print('# DATE_UTC TIME_UTC UNIX_EPOCH T_CELSIUS LIGHTMETER_COUNTS DAYLIGHT_LUX STATUS')
+    elif args.format == 'json':
+        import json
 
     while True:
         l = lmeter.read()
