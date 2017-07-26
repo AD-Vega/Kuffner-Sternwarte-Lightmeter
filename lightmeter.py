@@ -4,7 +4,7 @@ import usb.core as usb
 import usb.util as util
 import attr
 from time import sleep, time
-from datetime import datetime
+from datetime import datetime, timezone
 
 class Lightmeter:
     """An instance of a Kuffner-Sternwarte lightmeter. Call `read` to read the
@@ -16,7 +16,6 @@ class Lightmeter:
 
         Reading is a read-only structure with the following fields:
             utc -- a `datetime` object representing the timestamp
-            unix -- a UNIX epoch representing the timestamp
             lightlevel -- the raw counts representing the light level
             daylight -- the reading of the daylight sensor in Lux
             temperature -- the temperature in degrees Celsius
@@ -25,7 +24,6 @@ class Lightmeter:
         The daylight sensor is available for certain hardware models only.
         """
         utc = attr.ib()
-        unix = attr.ib()
         lightlevel = attr.ib()
         daylight = attr.ib()
         temperature = attr.ib()
@@ -48,11 +46,10 @@ class Lightmeter:
 
     def read(self):
         """Returns an instance of Lightmeter.Reading holding the current readings."""
-        unix = int(time())
+        utc = datetime.now(timezone.utc)
         L, daylight, isOK = Lightmeter._readLight(self._endpoints)
         T = Lightmeter._readTemperature(self._endpoints)
-        utc = datetime.fromtimestamp(unix)
-        return Lightmeter.Reading(utc=utc, unix=unix, lightlevel=L,
+        return Lightmeter.Reading(utc=utc, lightlevel=L,
                                   daylight=daylight, temperature=T,
                                   status=isOK)
 
@@ -162,9 +159,8 @@ class _MockLightmeter:
     def read(self):
         from random import randrange, choice
         """Returns an instance of Lightmeter.Reading holding the current readings."""
-        unix = int(time())
-        utc = datetime.fromtimestamp(unix)
-        return Lightmeter.Reading(utc=utc, unix=unix,
+        utc = datetime.now(timezone.utc)
+        return Lightmeter.Reading(utc=utc,
                                   lightlevel=randrange(1000, 100000),
                                   daylight=randrange(1,1000),
                                   temperature=float(randrange(-20,40)),
@@ -246,7 +242,7 @@ if __name__ == '__main__':
     while True:
         l = lmeter.read()
         if args.format == 'text':
-            print(l.utc, l.unix,
+            print(l.utc, int(l.utc.timestamp()),
                   '{:.1f}'.format(l.temperature), l.lightlevel,
                   '{:.3g}'.format(l.daylight),
                   ('OK' if l.status else 'ERROR'),
