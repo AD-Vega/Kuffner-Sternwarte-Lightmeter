@@ -16,11 +16,11 @@ tabular data into a pandas `DataFrame` is provided.
 
 To simply print sensor readings every two minutes, run
 
-  $ ./lightmeter.py -i 2
-  # DATE_UTC TIME_UTC UNIX_EPOCH T_CELSIUS LIGHTMETER_COUNTS DAYLIGHT_LUX STATUS
-  2017-07-26 14:49:09.459977+00:00 1501080549 26.7 1523160 72.4 OK
-  2017-07-26 14:51:09.598521+00:00 1501080669 26.6 1520880 71.7 OK
-  2017-07-26 14:53:09.686995+00:00 1501080789 26.6 1519440 70.2 OK
+    $ ./lightmeter.py -i 2
+    # DATE_UTC TIME_UTC UNIX_EPOCH T_CELSIUS LIGHTMETER_COUNTS DAYLIGHT_LUX STATUS
+    2017-07-26 14:49:09.459977+00:00 1501080549 26.7 1523160 72.4 OK
+    2017-07-26 14:51:09.598521+00:00 1501080669 26.6 1520880 71.7 OK
+    2017-07-26 14:53:09.686995+00:00 1501080789 26.6 1519440 70.2 OK
 
 Use `Ctrl+C` to interrupt. The default output is plain text with
 space-delimited columns. The comment that is printed first labels the columns.
@@ -30,32 +30,32 @@ because the calibration is necessary.
 
 A slightly less readable output that is easier to work with is JSON. Running
 
-  $ ./lightmeter.py -i 2 -f json_table > myreadings.json
+    $ ./lightmeter.py -i 2 -f json_table > myreadings.json
 
 generates a file can be parsed with any software that can read JSON and
 contains all the information needed to interpret the records. If you use
 `python` to process the data, a function is provided in `lightmeter_pandas.py`
 to easily import the data, e.g.
 
-  $ python
-  Python 3.6.1 (default, Mar 27 2017, 00:27:06)
-  [GCC 6.3.1 20170306] on linux
-  Type "help", "copyright", "credits" or "license" for more information.
-  >>> import lightmeter_pandas
-  >>> readings = lightmeter_pandas.from_json('myreadings.json')
-  >>> print(readings)
-                                    T        L   D     S
-  TS
-  2017-07-26 14:36:19.372882  26.8125  1531200  79  True
-  2017-07-26 14:36:21.234798  26.8125  1530120  79  True
-  2017-07-26 14:36:23.090475  26.8125  1530840  79  True
-  2017-07-26 14:36:24.953951  26.7500  1530120  79  True
-  2017-07-26 14:36:26.818038  26.8125  1529760  79  True
-  2017-07-26 14:36:28.674192  26.8125  1529760  79  True
-  2017-07-26 14:36:30.530111  26.8125  1530240  79  True
-  2017-07-26 14:36:32.386035  26.7500  1530240  79  True
-  2017-07-26 14:36:34.249958  26.8125  1529880  79  True
-  >>>
+    $ python
+    Python 3.6.1 (default, Mar 27 2017, 00:27:06)
+    [GCC 6.3.1 20170306] on linux
+    Type "help", "copyright", "credits" or "license" for more information.
+    >>> import lightmeter_pandas
+    >>> readings = lightmeter_pandas.from_json('myreadings.json')
+    >>> print(readings)
+                                      T        L   D     S
+    TS
+    2017-07-26 14:36:19.372882  26.8125  1531200  79  True
+    2017-07-26 14:36:21.234798  26.8125  1530120  79  True
+    2017-07-26 14:36:23.090475  26.8125  1530840  79  True
+    2017-07-26 14:36:24.953951  26.7500  1530120  79  True
+    2017-07-26 14:36:26.818038  26.8125  1529760  79  True
+    2017-07-26 14:36:28.674192  26.8125  1529760  79  True
+    2017-07-26 14:36:30.530111  26.8125  1530240  79  True
+    2017-07-26 14:36:32.386035  26.7500  1530240  79  True
+    2017-07-26 14:36:34.249958  26.8125  1529880  79  True
+    >>>
 
 There is another format called `json_lines` which does not contain a schema,
 but consists only of newline-delimited records. Because the records are
