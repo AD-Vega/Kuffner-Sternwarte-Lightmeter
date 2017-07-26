@@ -53,6 +53,7 @@ class Lightmeter:
                                   daylight=daylight, temperature=T,
                                   status=isOK)
 
+    @staticmethod
     def _initDevice():
         """Finds a Microchip PICDEM, which is what the lightmeter identifies as,
         sadly. Not robust, but I can see no better way."""
@@ -107,6 +108,7 @@ class Lightmeter:
 
         return endpointIn, endpointOut
 
+    @staticmethod
     def _readTemperature(endpoints):
         endpointIn, endpointOut = endpoints
         N = endpointOut.write('T')
@@ -118,6 +120,7 @@ class Lightmeter:
         # Throw away 3 status bits and convert to decimal.
         return (raw[0] // 8 + raw[1] * 32) / 16
 
+    @staticmethod
     def _luxFromDaysensor(Ch0, Ch1):
         """ Calculates Lux from the TAOS, www.taosinc.com TSL2560/TSL2561 two band light sensor
             for the TMB-package.
@@ -135,6 +138,7 @@ class Lightmeter:
         Faktor = 21.0
         return Lux*Faktor
 
+    @staticmethod
     def _readLight(endpoints):
         endpointIn, endpointOut = endpoints
         N = endpointOut.write('L')
