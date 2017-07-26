@@ -213,7 +213,7 @@ if __name__ == '__main__':
     parser.add_argument('--nohw', action='store_true',
                         help='don\'t use hardware and instead generate mock readings for testing')
     parser.add_argument('-f', '--format', default='text',
-                        choices=('text', 'json', 'json_lines'),
+                        choices=('text', 'json_table', 'json_lines'),
                         help='output format')
 
     args = parser.parse_args()
@@ -235,17 +235,10 @@ if __name__ == '__main__':
 
     if args.format == 'text':
         print('# DATE_UTC TIME_UTC UNIX_EPOCH T_CELSIUS LIGHTMETER_COUNTS DAYLIGHT_LUX STATUS')
-    elif args.format == 'json_lines':
-        import json
-    elif args.format == 'json':
-        import json
+    elif args.format == 'json_table':
         import atexit
-
-        fromColumns = ["utc", "temperature", "lightlevel", "daylight", "status"]
-        toColumns = ["TS", "T", "L", "D", "S"]
         print(_jsonSchemaPrefix)
         printComma = ''
-
         @atexit.register
         def finish():
             print('\n]}')
@@ -260,7 +253,7 @@ if __name__ == '__main__':
                   flush=True)
         elif args.format == 'json_lines':
             print(l.json(), flush=True)
-        elif args.format == 'json':
+        elif args.format == 'json_table':
             print(printComma, l.json(abbrev=True), end='', sep='\n', flush=True)
             printComma = ','
         sleep(args.interval * 60)
