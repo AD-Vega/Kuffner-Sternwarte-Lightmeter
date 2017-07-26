@@ -31,15 +31,17 @@ class Lightmeter:
         temperature = attr.ib()
         status = attr.ib()
 
-        def asdict(self):
-            dct = attr.asdict(self)
-            del dct['utc']
-            return dct
+        _colOrder = ("utc", "temperature", "lightlevel", "daylight", "status")
+        _abbrevOrder = ("TS", "T", "L", "D", "S")
 
-        def fromdict(dct):
-            dct = dct.copy()
-            dct['utc'] = datetime.fromtimestamp(dct['unix'])
-            return Lightmeter.Reading(**dct)
+        def json(self, abbrev=False):
+            dct = attr.asdict(self)
+            dct['utc'] = '"' + self.utc.isoformat() + '"'
+            dct['status'] = 'true' if self.status else 'false'
+            order = self._abbrevOrder if abbrev else self._colOrder
+            line = ', '.join(['"{}": {}'.format(y, dct[x])
+                              for x, y in zip(self._colOrder, order)])
+            return '{{{}}}'.format(line)
 
     def __init__(self):
         self._endpoints = Lightmeter._initDevice()
@@ -168,6 +170,36 @@ class _MockLightmeter:
                                   temperature=float(randrange(-20,40)),
                                   status=choice((True, False)))
 
+# PANDAS compatible JSON table-schema
+# https://specs.frictionlessdata.io/table-schema/
+_jsonSchemaPrefix = """\
+{"schema": {
+    "primaryKey": ["TS"],
+    "fields": [
+        {"name": "TS",
+         "type": "datetime",
+         "title": "Timestamp",
+         "description": "ISO8601 string, UTC"},
+        {"name": "T",
+         "type": "number",
+         "title": "Temperature",
+         "description": "Temperature in degrees Celsius"},
+        {"name": "L",
+         "type": "integer",
+         "title": "Light level",
+         "description": "Light level counts, no calibration"},
+        {"name": "D",
+         "type": "integer",
+         "title": "Daylight",
+         "description": "Daylight sensor reading in Lux"},
+        {"name": "S",
+         "type": "boolean",
+         "title": "Status",
+         "description": "True if everything is OK, false otherwise"}
+    ]
+ },
+ "data": ["""
+
 
 if __name__ == '__main__':
     import sys
@@ -209,17 +241,14 @@ if __name__ == '__main__':
         import json
         import atexit
 
-        columnNames = ["unix", "temperature", "lightlevel", "daylight", "status"]
-        print("""[{{"lightmeter": "Kuffner-Sternwarte Lightmeter",
-                  "columns": [{}],
-                  "units": ["seconds", "celsius", "counts", "lux", "boolean"]}}"""
-              .format(', '.join(['"{}"'.format(x) for x in columnNames])),
-              end='')
-        # TODO is there a way to get the hardware version and print it?
+        fromColumns = ["utc", "temperature", "lightlevel", "daylight", "status"]
+        toColumns = ["TS", "T", "L", "D", "S"]
+        print(_jsonSchemaPrefix)
+        printComma = ''
 
         @atexit.register
         def finish():
-            print('\n]')
+            print('\n]}')
 
     while True:
         l = lmeter.read()
@@ -227,10 +256,11 @@ if __name__ == '__main__':
             print(l.utc, l.unix,
                   '{:.1f}'.format(l.temperature), l.lightlevel,
                   '{:.3g}'.format(l.daylight),
-                  ('OK' if l.status else 'ERROR'))
+                  ('OK' if l.status else 'ERROR'),
+                  flush=True)
         elif args.format == 'json_lines':
-            print(json.dumps(l.asdict()))
+            print(l.json(), flush=True)
         elif args.format == 'json':
-            dct = l.asdict()
-            print(',', json.dumps([dct[x] for x in columnNames]), end='', sep='\n')
+            print(printComma, l.json(abbrev=True), end='', sep='\n', flush=True)
+            printComma = ','
         sleep(args.interval * 60)
