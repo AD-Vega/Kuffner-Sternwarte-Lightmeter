@@ -5,6 +5,7 @@ import usb.util as util
 import attr
 from time import sleep, time
 from datetime import datetime, timezone
+from lightmeter_table import jsonSchemaPrefix
 
 class Lightmeter:
     """An instance of a Kuffner-Sternwarte lightmeter. Call `read` to read the
@@ -170,37 +171,6 @@ class _MockLightmeter:
                                   temperature=float(randrange(-20,40)),
                                   status=choice((True, False)))
 
-# PANDAS compatible JSON table-schema
-# https://specs.frictionlessdata.io/table-schema/
-_jsonSchemaPrefix = """\
-{"schema": {
-    "primaryKey": ["TS"],
-    "fields": [
-        {"name": "TS",
-         "type": "datetime",
-         "title": "Timestamp",
-         "description": "ISO8601 string, UTC"},
-        {"name": "T",
-         "type": "number",
-         "title": "Temperature",
-         "description": "Temperature in degrees Celsius"},
-        {"name": "L",
-         "type": "integer",
-         "title": "Light level",
-         "description": "Light level counts, no calibration"},
-        {"name": "D",
-         "type": "integer",
-         "title": "Daylight",
-         "description": "Daylight sensor reading in Lux"},
-        {"name": "S",
-         "type": "boolean",
-         "title": "Status",
-         "description": "True if everything is OK, false otherwise"}
-    ]
- },
- "data": ["""
-
-
 if __name__ == '__main__':
     import sys
     import argparse
@@ -237,7 +207,7 @@ if __name__ == '__main__':
         print('# DATE_UTC TIME_UTC UNIX_EPOCH T_CELSIUS LIGHTMETER_COUNTS DAYLIGHT_LUX STATUS')
     elif args.format == 'json_table':
         import atexit
-        print(_jsonSchemaPrefix)
+        print(jsonSchemaPrefix, end='')
         printComma = ''
         @atexit.register
         def finish():
