@@ -213,7 +213,7 @@ if __name__ == '__main__':
     parser.add_argument('--nohw', action='store_true',
                         help='don\'t use hardware and instead generate mock readings for testing')
     parser.add_argument('-f', '--format', default='text',
-                        choices=('text', 'json_table', 'json_lines'),
+                        choices=('text', 'json_table', 'json_lines', 'json_lines_long'),
                         help='output format')
 
     args = parser.parse_args()
@@ -252,7 +252,9 @@ if __name__ == '__main__':
                   ('OK' if l.status else 'ERROR'),
                   flush=True)
         elif args.format == 'json_lines':
-            print(l.json(), flush=True)
+            print(l.json(abbrev=True), flush=True)
+        elif args.format == 'json_lines_long':
+            print(l.json(abbrev=False), flush=True)
         elif args.format == 'json_table':
             print(printComma, l.json(abbrev=True), end='', sep='\n', flush=True)
             printComma = ','
