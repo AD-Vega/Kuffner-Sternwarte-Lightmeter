@@ -164,7 +164,8 @@ if __name__ == '__main__':
                                                  'mark 2.3')
     parser.add_argument('-i', '--interval', type=float, default=1.0,
                         help='sampling interval in minutes (can be fractional)')
-    parser.add_argument('-f', '--format', default='text', choices=('text', 'json'),
+    parser.add_argument('-f', '--format', default='text',
+                        choices=('text', 'json', 'json_lines'),
                         help='output format')
 
     args = parser.parse_args()
@@ -183,8 +184,23 @@ if __name__ == '__main__':
 
     if args.format == 'text':
         print('# DATE_UTC TIME_UTC UNIX_EPOCH T_CELSIUS LIGHTMETER_COUNTS DAYLIGHT_LUX STATUS')
+    elif args.format == 'json_lines':
+        import json
     elif args.format == 'json':
         import json
+        import atexit
+
+        columnNames = ["unix", "temperature", "lightlevel", "daylight", "status"]
+        print("""[{{"lightmeter": "Kuffner-Sternwarte Lightmeter",
+                  "columns": [{}],
+                  "units": ["seconds", "celsius", "counts", "lux", "boolean"]}}"""
+              .format(', '.join(['"{}"'.format(x) for x in columnNames])),
+              end='')
+        # TODO is there a way to get the hardware version and print it?
+
+        @atexit.register
+        def finish():
+            print('\n]')
 
     while True:
         l = lmeter.read()
@@ -193,6 +209,9 @@ if __name__ == '__main__':
                   '{:.1f}'.format(l.temperature), l.lightlevel,
                   '{:.3g}'.format(l.daylight),
                   ('OK' if l.status else 'ERROR'))
-        elif args.format == 'json':
+        elif args.format == 'json_lines':
             print(json.dumps(l.asdict()))
+        elif args.format == 'json':
+            dct = l.asdict()
+            print(',', json.dumps([dct[x] for x in columnNames]), end='', sep='\n')
         sleep(args.interval * 60)
