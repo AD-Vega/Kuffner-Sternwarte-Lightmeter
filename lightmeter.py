@@ -154,6 +154,20 @@ class Lightmeter:
         daylight = Lightmeter._luxFromDaysensor(TslMw0, TslMw1)
         return reading, daylight, isOK
 
+class _MockLightmeter:
+    """For testing."""
+
+    def read(self):
+        from random import randrange, choice
+        """Returns an instance of Lightmeter.Reading holding the current readings."""
+        unix = int(time())
+        utc = datetime.fromtimestamp(unix)
+        return Lightmeter.Reading(utc=utc, unix=unix,
+                                  lightlevel=randrange(1000, 100000),
+                                  daylight=randrange(1,1000),
+                                  temperature=float(randrange(-20,40)),
+                                  status=choice((True, False)))
+
 
 if __name__ == '__main__':
     import sys
@@ -164,6 +178,8 @@ if __name__ == '__main__':
                                                  'mark 2.3')
     parser.add_argument('-i', '--interval', type=float, default=1.0,
                         help='sampling interval in minutes (can be fractional)')
+    parser.add_argument('--nohw', action='store_true',
+                        help='don\'t use hardware and instead generate mock readings for testing')
     parser.add_argument('-f', '--format', default='text',
                         choices=('text', 'json', 'json_lines'),
                         help='output format')
@@ -171,7 +187,10 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     try:
-        lmeter = Lightmeter()
+        if args.nohw:
+            lmeter = _MockLightmeter()
+        else:
+            lmeter = Lightmeter()
     except usb.USBError as e:
         if e.errno != 13:
                 raise e
