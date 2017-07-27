@@ -40,19 +40,34 @@ if __name__ == '__main__':
                                      'Useful for sending the output of '
                                      'lightmeter.py over the network and '
                                      'storing it on the other side.')
-    parser.parse_args()
+    parser.add_argument('-o', '--outfile', type=str, default='-',
+                        help='output file, stdout if unspecified')
+    parser.add_argument('-i', '--infile', type=str, default='-',
+                        help='input file, stdin if unspecified')
+    args = parser.parse_args()
+
+    if args.outfile == '-':
+        outfile = sys.stdout
+    else:
+        outfile = open(args.outfile, 'w')
+
+    if args.infile == '-':
+        infile = sys.stdin
+    else:
+        infile = open(args.infile, 'r')
 
     longNames = ('utc', 'temperature', 'lightlevel', 'daylight', 'status')
     shortNames = ('TS', 'T', 'L', 'D', 'S')
-    print(jsonSchemaPrefix, end='')
+    print(jsonSchemaPrefix, end='', file=outfile)
     printComma = ''
 
     @atexit.register
     def finish():
-        print('\n]}')
+        print('\n]}', file=outfile)
+        outfile.close()
 
     while True:
-        line = sys.stdin.readline()
+        line = infile.readline()
         if line == '':
             break
         if 'lightlevel' in line:
@@ -60,5 +75,5 @@ if __name__ == '__main__':
             for long, short in zip(longNames, shortNames):
                 line = line.replace(long, short)
         line = line.rstrip()
-        print(printComma, line, end='', sep='\n', flush=True)
+        print(printComma, line, end='', sep='\n', flush=True, file=outfile)
         printComma = ','
