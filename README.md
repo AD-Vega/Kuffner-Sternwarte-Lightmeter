@@ -12,7 +12,14 @@ or send it over a network. For storage, the data is formatted according to the
 used by [pandas](http://pandas.pydata.org/). A utility for importing the
 tabular data into a pandas `DataFrame` is provided.
 
-## Examples
+## Dependencies
+
+  - `python3`
+  - `pyusb` for device access
+  - `pandas` for easy data import
+  - `socat` for the remote logging example
+
+## Usage
 
 To simply print sensor readings every two minutes, run
 
@@ -62,6 +69,21 @@ but consists only of newline-delimited records. Because the records are
 standalone, they can be sent through a network (e.g. using `socat` or
 `netcat`). These records can be converted into `json_table` format by piping
 them through `lightmeter_table.py`.
+
+An example script is provided that stores data on a remote server. To use it,
+run the following on the machine that will store data
+
+    $ ./lightmeter_remote.sh receive 1234
+
+and the following on the machine with the lightmeter
+
+    $ ./lightmeter_remote.sh send remotemachineaddress:1234 -i 2
+
+where 1234 is an available port. Other options can be added to the sending
+command, except for the data format. On the receiving end, a file will be
+generated with a timestamped name and measurements will be stored as
+`json_table`. The receiver opens a new file for each connection and can even
+handle multiple senders.
 
 ## Authors
 
