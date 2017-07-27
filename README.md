@@ -8,9 +8,9 @@ driver requires pyusb and works similarly to the original driver which it is
 based on, but provides more versatile output. In particular, it provides
 several variants of JSON formatting which makes it easy to store data portably
 or send it over a network. For storage, the data is formatted according to the
-[table-schema](https://specs.frictionlessdata.io/table-schema/), which is also
-used by [pandas](http://pandas.pydata.org/). A utility for importing the
-tabular data into a pandas `DataFrame` is provided.
+[`table-schema`](https://specs.frictionlessdata.io/table-schema/), which is also
+used by [`pandas`](http://pandas.pydata.org/). A utility for importing the
+tabular data into a `pandas` `DataFrame` is provided.
 
 ## Dependencies
 
