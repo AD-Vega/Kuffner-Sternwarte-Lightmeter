@@ -33,7 +33,8 @@ Use `Ctrl+C` to interrupt. The default output is plain text with
 space-delimited columns. The comment that is printed first labels the columns.
 Temperature is in degrees Celsius and the daylight sensor readings (if your
 hardware has one) are in Lux. The main sensor readings are in raw counts
-because the calibration is necessary.
+because calibration is necessary (see the lightmeter's
+[webpage](http://kuffner-sternwarte.at/hms/wiki/index.php5?title=Lightmeter_calibration)).
 
 A slightly less readable output that is easier to work with is JSON. Running
 
