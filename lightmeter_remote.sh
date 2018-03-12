@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-mypath="$(dirname "${BASH_SOURCE:-./}")"
+mypath="$(dirname $0)"
 
 function send_mode() {
     serverport="$1"
@@ -12,8 +12,7 @@ function send_mode() {
 function receive_mode() {
     port="$1"
     exec socat TCP-LISTEN:"$port",reuseaddr,fork \
-        SYSTEM:'exec '"'$mypath'"'/lightmeter_table.py -o lightmeter-measurements-$(TZ=UTC
-date -Ins).json'
+        SYSTEM:'exec '"'$mypath'"'/lightmeter_table.py -o lightmeter-measurements-$(TZ=UTC date -Ins).json'
 }
 
 cmd="$1"
