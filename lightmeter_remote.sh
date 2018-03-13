@@ -20,8 +20,8 @@ shift
 case "$cmd" in
     send) send_mode "$@" ;;
     receive) receive_mode "$@" ;;
-    *)  echo "Usage: $0 send SERVER:PORT LIGHTMETER_OPTIONS"
-        echo "   or: $0 receive PORT"
+    *)  echo "Usage: $0 send SERVER:PORT LIGHTMETER_OPTIONS" 1>&2
+        echo "   or: $0 receive PORT" 1>&2
         exit 1
         ;;
 esac
